@@ -1,0 +1,25 @@
+# action.yml
+name: 'Pelican build'
+description: 'Builds a website site using the Pelican static site generator'
+
+branding:
+  icon: 'home'
+  color: 'red'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'  
+
+inputs:
+  PELICAN_CONFIG_FILE:
+    description: 'override the default `publishconf.py` config file'
+    required: false
+    default: publishconf.py
+  PELICAN_CONTENT_DIR:
+    description: 'override the default `content` content directory'
+    required: false
+    default: content
+  PELICAN_OUTPUT_DIR:
+    description: 'override the default `output` output directory'
+    required: false
+    default: output
