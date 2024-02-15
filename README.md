@@ -1,15 +1,9 @@
-# Deploy Pelican to Github Pages
+# Build Pelican websites in Github Actions
 
-Automated deployment of Pelican SSG generated static websites to GitHub Pages. 
-
-GitHub Pages can serve webpages from three predefined places
-1. **main/root**: The root folder of the main branch
-2. **main/docs**: Doc folder in the main branch
-2. **gh-pages/root**: The root folder of any branch named "gh-pages"
+Pelican is a static site generator written in Python. This action instantiates a Docker container to install Pelican and build the website. This action does not handle publishing the site to Github Pages. This was done intentionally to allow other actions handling the deployment.
 
 ## Prerequisites
-1. Your working directory should be in the `main` branch of your repository. 
-2. Ensure you have captured your dependencies in `requirements.txt`. If not you can run the below command
+Ensure you have captured your dependencies in `requirements.txt`. If not you can run the below command:
 ```bash
 pip freeze > requirements.txt
 ```
@@ -18,28 +12,45 @@ pip freeze > requirements.txt
 First create a file named at the path `.github/.workflows/pelican.yml`
 The conents of the file should be 
 ```yaml
-name: Deploy
+name: Pelican site build and deploy
 
 on:
-  # Trigger the workflow on push on main branch,
   push:
     branches:
       - main
-
+  workflow_dispatch:
+  
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-      with: 
-        submodules: 'true'
-    - uses: rehanhaider/pelican-to-github-pages@v1.0.3
-      env:
-        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        GH_PAGES_CNAME: ${{secrets.DOMAIN_CNAME}}
-```
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - id: pages
+        uses: actions/configure-pages@v4
+      - uses: trinora/pelican-build-action@main
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: output
 
-Then, setup a secrets in your repository named `DOMAIN_CNAME` that should contain the URL of your custom domain without the protocol, e.g. `example.com`. This is only required if you have a custom domain, if you want to use the `*.github.io` subdomain, then you don't need this. 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+```
 
 ## Default configuration and overrides
 This GitHub action will generate the static website using the following defaults
@@ -49,5 +60,4 @@ This GitHub action will generate the static website using the following defaults
 You can override them by adding the following in the pelican.yml file under env variables
 ```yaml
 PELICAN_CONFIG_FILE: config-file-name
-PELICAN_CONTENT_FOLDER: content-folder-name
-
+PELICAN_CONTENT_FILE: content-folder-name
